@@ -53,6 +53,7 @@ int pipe_b_x = 75;
 int pipe_b_y = 9;
 
 int score = 0;
+int hiscore = 0;
 int tick = 0;
 
 /* build attribute byte */
@@ -209,6 +210,7 @@ void cursor_goto(int x, int y){
     current_loc = (x*BYTES_FOR_EACH_ELEMENT) + (line_size * y);
 }
 
+/* funcao para desenhar o ceu, não só limpa a tela e pinta de azul mas também anima estrelas em paralaxe */
 void clear_screen(void)
 {
     unsigned int i = 0;
@@ -218,12 +220,12 @@ void clear_screen(void)
             vidptr[i++] = '.';
             vidptr[i++] = attr;
         } 
-        else if (((i+tick/4)/2)%46 == 1) {
+        else if (((i+tick/4)/2)%46 == 1) { // 2a camada de estrelas
             vidptr[i++] = '+';
             vidptr[i++] = attr;
         }
         else {
-            vidptr[i++] = ' ';
+            vidptr[i++] = ' '; // céu padrão
             vidptr[i++] = attr;
         }
     }
@@ -252,7 +254,13 @@ void keyboard_handler_main(void)
 		if(keyboard_map[(unsigned char) keycode] == 'w') {
             if (bird_y >= 99 + JUMP_SPEED*2) return;
             bird_y_acceleration = JUMP_SPEED;
+        } else if (keyboard_map[(unsigned char) keycode] == 'r')
+        {
+            if (bird_y >= 99 + JUMP_SPEED*2) {
+                restart_game();
+            }
         }
+        
 		
 	}
 }
@@ -283,19 +291,22 @@ void make_bird(int y)
 {
     cursor_goto(BIRD_X, y);
     if (y >= 0) {
-        if (bird_y_acceleration <= JUMP_SPEED+2) kprint_char(0xDC, vga_attr(15, SKY_COLOR));
-        else kprint_char(0x5C, vga_attr(15, SKY_COLOR));
-        kprint(" ", vga_attr(0, BIRD_COLOR));
-        kprint_char(0xF8, vga_attr(0, BIRD_COLOR));
-        kprint_char(0x10, vga_attr(12, SKY_COLOR));
+        // asa abaixada ou levantada dependendo se o player acabou de pular ou não
+        if (bird_y_acceleration <= JUMP_SPEED+2) kprint_char(0xDC, vga_attr(15, SKY_COLOR)); // asa batendo
+        else kprint_char(0x5C, vga_attr(15, SKY_COLOR)); // asa abaixada
+        kprint(" ", vga_attr(0, BIRD_COLOR)); // corpo
+        kprint_char(0xF8, vga_attr(0, BIRD_COLOR)); // olho
+        kprint_char(0x10, vga_attr(12, SKY_COLOR)); // bico
     }
 }
 
 /* lógica principal do pássaro */
 void bird_logic() {
     if (bird_y >= 99) {
-        cursor_goto(30, 5);
+        cursor_goto(25, 5);
         kprint("VOCE PERDEU!!! HAHAHAHAHA!", vga_attr(12, 0));
+        cursor_goto(23, 8);
+        kprint("Pressione R para jogar novamente", vga_attr(14, 0));
         return;
     }
     if (pipe_a_x == BIRD_X) {
@@ -321,8 +332,8 @@ void bird_logic() {
 /* desenha o cano na posição especificada */
 void make_pipe(int x, int y) {
     int height = 20;
-    char shade = 0xB1;
-    char light = 0xDD;
+    char shade = 0xB1; // caractere para sombra do cano
+    char light = 0xDD; // caractere para batendo no cano
     for (int i = 0; i < height; i++) {
         if (i == height -1) {
             cursor_goto(x-1, y-height-PIPE_GAP+i);
@@ -383,6 +394,26 @@ void misc_text_handler() {
     kprint_newline();
     kprint("SCORE: ", vga_attr(SKY_COLOR, 15));
     kprint_int(score, vga_attr(SKY_COLOR, 15));
+    if (hiscore > 0) {
+        kprint_newline();
+    kprint("HI SCORE: ", vga_attr(SKY_COLOR, 15));
+    kprint_int(hiscore, vga_attr(SKY_COLOR, 15));
+    }
+}
+
+void restart_game() {
+    if (hiscore < score) hiscore = score;
+
+    bird_y = 5;
+    bird_y_acceleration = JUMP_SPEED;
+
+    pipe_a_x = 50;
+    pipe_a_y = 8;
+    pipe_b_x = 75;
+    pipe_b_y = 9;
+
+    score = 0;
+    tick = 0;
 }
 
 
