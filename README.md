@@ -8,7 +8,7 @@ Esse projeto usou como base o repositório [mkeykernel](https://github.com/arjun
 
 ## Entrega de Ponderada: Criando um kernel simples
 
-O projeto inclui tanto os arquivos fonte do kernel (`kernel.asm`, `kernel.c`) quanto os binários pré-compilados (`kasm.o`, `kc.o`, `kernel`) e dependências (`keyboard_map.h`, `link.ld`) para uso com emuladores. É apenas necessário o uso de um sistema com bootloader GRUB e selecionar o kernel para execução.
+O projeto inclui tanto os arquivos fonte do kernel (`kernel.asm`, `kernel.c`) quanto os binários pré-compilados (`kasm.o`, `kc.o`, `kernel`) e dependências (`keyboard_map.h`, `link.ld`) para uso em máquina real ou emulador. É apenas necessário o uso de um sistema com bootloader GRUB e selecionar o kernel para execução.
 
 ### Instruções de uso (Linux / WSL)
 
