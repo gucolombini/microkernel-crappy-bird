@@ -335,7 +335,7 @@ void move_pipe() {
         pipe_b_x -= 1;
     } else {
         pipe_b_x = 70;
-        pipe_b_y = bird_y + 2;
+        pipe_b_y = bird_y - 1;
         if (pipe_b_y < 3) {
             pipe_b_y = 6;
         }
