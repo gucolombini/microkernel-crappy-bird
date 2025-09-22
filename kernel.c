@@ -40,6 +40,10 @@ char *vidptr = (char*)0xb8000;
 #define JUMP_SPEED -4
 #define TERMINAL_VEL 2
 
+#define SKY_COLOR 1
+#define BIRD_COLOR 14
+#define PIPE_COLOR 10
+
 int bird_y = 5;
 int bird_y_acceleration = JUMP_SPEED;
 
@@ -49,6 +53,7 @@ int pipe_b_x = 75;
 int pipe_b_y = 9;
 
 int score = 0;
+int tick = 0;
 
 /* build attribute byte */
 static inline unsigned char vga_attr(unsigned char fg, unsigned char bg) {
@@ -202,9 +207,11 @@ void cursor_goto(int x, int y){
 void clear_screen(void)
 {
     unsigned int i = 0;
-    unsigned char attr = vga_attr(15, 1); // céu azul :)
+    unsigned char attr = vga_attr(15, SKY_COLOR); // céu azul :)
     while (i < SCREENSIZE) {
-        vidptr[i++] = ' ';
+        if (((i+tick)/2)%34 == 1) vidptr[i++] = '.'; // efeito paralaxe para estrelas no céu
+        else if (((i+tick/4)/2)%46 == 1) vidptr[i++] = '+';
+        else vidptr[i++] = ' ';
         vidptr[i++] = attr;
     }
 }
@@ -230,7 +237,7 @@ void keyboard_handler_main(void)
 		}
 
 		if(keyboard_map[(unsigned char) keycode] == 'w') {
-            if (bird_y >= 99) return;
+            if (bird_y >= 99 + JUMP_SPEED*2) return;
             bird_y_acceleration = JUMP_SPEED;
         }
 		
@@ -252,6 +259,7 @@ void timer_handler_main(void) {
         make_pipe(pipe_a_x, pipe_a_y);
         make_pipe(pipe_b_x, pipe_b_y);
         misc_text_handler();
+        tick++;
     }
 
     write_port(0x20, 0x20); // EOI
@@ -270,7 +278,7 @@ void make_bird(int y)
 void bird_logic() {
     if (bird_y >= 99) {
         cursor_goto(30, 5);
-        kprint("VOCE PERDEU!!! HAHAHAHAHA!", vga_attr(4, 0));
+        kprint("VOCE PERDEU!!! HAHAHAHAHA!", vga_attr(12, 0));
         return;
     }
     if (pipe_a_x == BIRD_X) {
@@ -300,19 +308,23 @@ void make_pipe(int x, int y) {
     for (int i = 0; i < height; i++) {
         if (i == height -1) {
             cursor_goto(x-1, y-height-PIPE_GAP+i);
-            kprint("    ", vga_attr(6, 2));
+            kprint("#", vga_attr(PIPE_COLOR, 2));
+            kprint("   #", vga_attr(15, PIPE_COLOR));
         } else {
             cursor_goto(x, y-height-PIPE_GAP+i);
-            kprint("  ", vga_attr(6, 2));
+            kprint("#", vga_attr(PIPE_COLOR, 2));
+            kprint(" #", vga_attr(15, PIPE_COLOR));
         }
     }
     for (int i = 0; i < height; i++) {
         if (i == height -1) {
             cursor_goto(x-1, y+height+PIPE_GAP-i);
-            kprint("    ", vga_attr(6, 2));
+            kprint("#", vga_attr(PIPE_COLOR, 2));
+            kprint("   #", vga_attr(15, PIPE_COLOR));
         } else {
             cursor_goto(x, y+height+PIPE_GAP-i);
-            kprint("  ", vga_attr(6, 2));
+            kprint("#", vga_attr(PIPE_COLOR, 2));
+            kprint(" #", vga_attr(15, PIPE_COLOR));
         }
     }
 }
@@ -345,10 +357,10 @@ void move_pipe() {
 /* exibe texto padrão e pontuação */
 void misc_text_handler() {
     cursor_goto(0, 0);
-    kprint("CRAPPY BIRD", vga_attr(1, 15));
+    kprint("CRAPPY BIRD", vga_attr(SKY_COLOR, 15));
     kprint_newline();
-    kprint("SCORE: ", vga_attr(1, 15));
-    kprint_int(score, vga_attr(1, 15));
+    kprint("SCORE: ", vga_attr(SKY_COLOR, 15));
+    kprint_int(score, vga_attr(SKY_COLOR, 15));
 }
 
 
