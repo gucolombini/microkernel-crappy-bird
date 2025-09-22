@@ -192,6 +192,11 @@ void kprint_int(int value, unsigned char attr)
     }
 }
 
+void kprint_char(unsigned char c, unsigned char attr) {
+    vidptr[current_loc++] = c;
+    vidptr[current_loc++] = attr;
+}
+
 void kprint_newline(void)
 {
 	unsigned int line_size = BYTES_FOR_EACH_ELEMENT * COLUMNS_IN_LINE;
@@ -209,10 +214,18 @@ void clear_screen(void)
     unsigned int i = 0;
     unsigned char attr = vga_attr(15, SKY_COLOR); // céu azul :)
     while (i < SCREENSIZE) {
-        if (((i+tick)/2)%34 == 1) vidptr[i++] = '.'; // efeito paralaxe para estrelas no céu
-        else if (((i+tick/4)/2)%46 == 1) vidptr[i++] = '+';
-        else vidptr[i++] = ' ';
-        vidptr[i++] = attr;
+        if (((i+tick)/2)%34 == 1) { // efeito paralaxe para estrelas no céu
+            vidptr[i++] = '.';
+            vidptr[i++] = attr;
+        } 
+        else if (((i+tick/4)/2)%46 == 1) {
+            vidptr[i++] = '+';
+            vidptr[i++] = attr;
+        }
+        else {
+            vidptr[i++] = ' ';
+            vidptr[i++] = attr;
+        }
     }
 }
 
@@ -270,7 +283,11 @@ void make_bird(int y)
 {
     cursor_goto(BIRD_X, y);
     if (y >= 0) {
-        kprint("O>", vga_attr(15, 14));
+        if (bird_y_acceleration <= JUMP_SPEED+2) kprint_char(0xDC, vga_attr(15, SKY_COLOR));
+        else kprint_char(0x5C, vga_attr(15, SKY_COLOR));
+        kprint(" ", vga_attr(0, BIRD_COLOR));
+        kprint_char(0xF8, vga_attr(0, BIRD_COLOR));
+        kprint_char(0x10, vga_attr(12, SKY_COLOR));
     }
 }
 
@@ -304,27 +321,32 @@ void bird_logic() {
 /* desenha o cano na posição especificada */
 void make_pipe(int x, int y) {
     int height = 20;
-    
+    char shade = 0xB1;
+    char light = 0xDD;
     for (int i = 0; i < height; i++) {
         if (i == height -1) {
             cursor_goto(x-1, y-height-PIPE_GAP+i);
-            kprint("#", vga_attr(PIPE_COLOR, 2));
-            kprint("   #", vga_attr(15, PIPE_COLOR));
+            kprint_char(shade, vga_attr(2, PIPE_COLOR));
+            kprint("   ", vga_attr(15, PIPE_COLOR));
+            kprint_char(light, vga_attr(15, PIPE_COLOR));
         } else {
             cursor_goto(x, y-height-PIPE_GAP+i);
-            kprint("#", vga_attr(PIPE_COLOR, 2));
-            kprint(" #", vga_attr(15, PIPE_COLOR));
+            kprint_char(shade, vga_attr(2, PIPE_COLOR));
+            kprint(" ", vga_attr(15, PIPE_COLOR));
+            kprint_char(light, vga_attr(15, PIPE_COLOR));
         }
     }
     for (int i = 0; i < height; i++) {
         if (i == height -1) {
             cursor_goto(x-1, y+height+PIPE_GAP-i);
-            kprint("#", vga_attr(PIPE_COLOR, 2));
-            kprint("   #", vga_attr(15, PIPE_COLOR));
+            kprint_char(shade, vga_attr(2, PIPE_COLOR));
+            kprint("   ", vga_attr(15, PIPE_COLOR));
+            kprint_char(light, vga_attr(15, PIPE_COLOR));
         } else {
             cursor_goto(x, y+height+PIPE_GAP-i);
-            kprint("#", vga_attr(PIPE_COLOR, 2));
-            kprint(" #", vga_attr(15, PIPE_COLOR));
+            kprint_char(shade, vga_attr(2, PIPE_COLOR));
+            kprint(" ", vga_attr(15, PIPE_COLOR));
+            kprint_char(light, vga_attr(15, PIPE_COLOR));
         }
     }
 }
