@@ -22,21 +22,26 @@
 #define PIT_HZ 100  // 100 Hz timer
 
 extern unsigned char keyboard_map[128];
-extern void keyboard_handler(void);
-extern void timer_handler(void);  // for update function
+extern void keyboard_handler(void); // para interrupts do teclado
+extern void timer_handler(void);    // para função do update
 extern char read_port(unsigned short port);
 extern void write_port(unsigned short port, unsigned char data);
 extern void load_idt(unsigned long *idt_ptr);
 
-/* current cursor location */
-unsigned int current_loc = 30;
+/* posição do cursor atual */
+unsigned int current_loc = 0;
 
 /* video memory begins at address 0xb8000 */
 char *vidptr = (char*)0xb8000;
 
-/* game variables */
+/* variáveis do jogo */
+#define BIRD_X 5
+#define PIPE_GAP 3
+#define JUMP_SPEED -4
+#define TERMINAL_VEL 2
+
 int bird_y = 5;
-int bird_y_acceleration = -3;
+int bird_y_acceleration = JUMP_SPEED;
 
 int pipe_a_x = 50;
 int pipe_a_y = 8;
@@ -44,9 +49,6 @@ int pipe_b_x = 75;
 int pipe_b_y = 9;
 
 int score = 0;
-
-/* full block character (filled cell) */
-#define FULL_BLOCK 0xDB
 
 /* build attribute byte */
 static inline unsigned char vga_attr(unsigned char fg, unsigned char bg) {
@@ -141,6 +143,7 @@ void timer_init(int frequency) {
     write_port(0x40, (divisor >> 8) & 0xFF);
 }
 
+/* printa um string na posição do cursor atual na cor especificada */
 void kprint(const char *str, unsigned char attr)
 {
 	unsigned int i = 0;
@@ -152,7 +155,7 @@ void kprint(const char *str, unsigned char attr)
 
 void kprint_int(int value, unsigned char attr)
 {
-    char buf[12]; // enough for a 32-bit int including minus sign
+    char buf[12]; // buffer suficiente para um int 32 bit
     int i = 0;
     int is_negative = 0;
 
@@ -167,7 +170,7 @@ void kprint_int(int value, unsigned char attr)
         value = -value;
     }
 
-    // convert int to string in reverse
+    // converte int para string de casa por casa
     while (value > 0) {
         buf[i++] = '0' + (value % 10);
         value /= 10;
@@ -177,7 +180,7 @@ void kprint_int(int value, unsigned char attr)
         buf[i++] = '-';
     }
 
-    // print string in correct order
+    // printa o buffer até onde o número chegou (ao contrário)
     for (int j = i - 1; j >= 0; j--) {
         vidptr[current_loc++] = buf[j];
         vidptr[current_loc++] = attr;
@@ -190,6 +193,7 @@ void kprint_newline(void)
 	current_loc = current_loc + (line_size - current_loc % (line_size));
 }
 
+/* move o cursor para a posição desejada */
 void cursor_goto(int x, int y){
     unsigned int line_size = BYTES_FOR_EACH_ELEMENT * COLUMNS_IN_LINE;
     current_loc = (x*BYTES_FOR_EACH_ELEMENT) + (line_size * y);
@@ -198,13 +202,11 @@ void cursor_goto(int x, int y){
 void clear_screen(void)
 {
     unsigned int i = 0;
-    unsigned char attr = vga_attr(12, 1); /* white on blue (fg=15 white, bg=1 blue) */
+    unsigned char attr = vga_attr(15, 1); // céu azul :)
     while (i < SCREENSIZE) {
         vidptr[i++] = ' ';
         vidptr[i++] = attr;
     }
-    /* reset current_loc to top-left */
-    current_loc = 0;
 }
 
 void keyboard_handler_main(void)
@@ -229,7 +231,7 @@ void keyboard_handler_main(void)
 
 		if(keyboard_map[(unsigned char) keycode] == 'w') {
             if (bird_y >= 99) return;
-            bird_y_acceleration = -4;
+            bird_y_acceleration = JUMP_SPEED;
         }
 		
 	}
@@ -254,64 +256,67 @@ void timer_handler_main(void) {
 
     write_port(0x20, 0x20); // EOI
 }
+
+/* desenha o pássaro na posição especificada */
 void make_bird(int y)
 {
-    cursor_goto(5, y);
+    cursor_goto(BIRD_X, y);
     if (y >= 0) {
         kprint("O>", vga_attr(15, 14));
     }
 }
 
+/* lógica principal do pássaro */
 void bird_logic() {
     if (bird_y >= 99) {
         cursor_goto(30, 5);
         kprint("VOCE PERDEU!!! HAHAHAHAHA!", vga_attr(4, 0));
         return;
     }
-    if (pipe_a_x == 5) {
-        if (bird_y - pipe_a_y > 3 || bird_y - pipe_a_y < -3) {
+    if (pipe_a_x == BIRD_X) {
+        if (bird_y - pipe_a_y > PIPE_GAP || bird_y - pipe_a_y < -PIPE_GAP) {
             bird_y = 99;
         } else {
             score ++;
         }
     }
 
-    if (pipe_b_x == 5) {
-        if (bird_y - pipe_b_y > 3 || bird_y - pipe_b_y < -3) {
+    if (pipe_b_x == BIRD_X) {
+        if (bird_y - pipe_b_y > PIPE_GAP || bird_y - pipe_b_y < -PIPE_GAP) {
             bird_y = 99;
         } else {
             score ++;
         }
     }
     
-    if (bird_y_acceleration < 2) bird_y_acceleration += 1;
+    if (bird_y_acceleration < TERMINAL_VEL) bird_y_acceleration += 1;
     bird_y += bird_y_acceleration;
 }
 
+/* desenha o cano na posição especificada */
 void make_pipe(int x, int y) {
     int height = 20;
-    int pipe_gap = 2;
     
     for (int i = 0; i < height; i++) {
         if (i == height -1) {
-            cursor_goto(x-1, y-height-pipe_gap+i);
+            cursor_goto(x-1, y-height-PIPE_GAP+i);
             kprint("    ", vga_attr(6, 2));
         } else {
-            cursor_goto(x, y-height-pipe_gap+i);
+            cursor_goto(x, y-height-PIPE_GAP+i);
             kprint("  ", vga_attr(6, 2));
         }
     }
     for (int i = 0; i < height; i++) {
         if (i == height -1) {
-            cursor_goto(x-1, y+height+pipe_gap-i);
+            cursor_goto(x-1, y+height+PIPE_GAP-i);
             kprint("    ", vga_attr(6, 2));
         } else {
-            cursor_goto(x, y+height+pipe_gap-i);
+            cursor_goto(x, y+height+PIPE_GAP-i);
             kprint("  ", vga_attr(6, 2));
         }
     }
 }
-
+/* move ambos os canos e reposiciona caso um atinja a borda da tela */
 void move_pipe() {
     // posicionamento dos canos não é aleatório, ele apenas usa a altura atual do player e altera por um valor pré-definido
     // afinal, o input do player é mais aleatório do que qualquer função pseudorandômica hehehe..... né????????
@@ -330,13 +335,14 @@ void move_pipe() {
         pipe_b_x -= 1;
     } else {
         pipe_b_x = 70;
-        pipe_b_y = bird_y - 2;
+        pipe_b_y = bird_y + 2;
         if (pipe_b_y < 3) {
             pipe_b_y = 6;
         }
     }
 }
 
+/* exibe texto padrão e pontuação */
 void misc_text_handler() {
     cursor_goto(0, 0);
     kprint("CRAPPY BIRD", vga_attr(1, 15));
@@ -354,6 +360,6 @@ void kmain(void)
     timer_init(PIT_HZ);
 
     while(1) {
-        asm volatile("hlt"); // sleep until next interrupt
+        asm volatile("hlt"); // halt até próximo interrupt
     }
 }

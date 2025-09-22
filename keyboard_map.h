@@ -17,7 +17,7 @@ unsigned char keyboard_map[128] =
   'm', ',', '.', '/',   0,				/* Right shift */
   '*',
     0,	/* Alt */
-  ' ',	/* Space bar */
+  'w',	/* Space bar */
     0,	/* Caps lock */
     0,	/* 59 - F1 key ... > */
     0,   0,   0,   0,   0,   0,   0,   0,
